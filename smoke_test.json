@@ -1,0 +1,15 @@
+{
+  "before": "In today's world, it is important to note that artificial intelligence plays a crucial role in the digital landscape. Furthermore, organizations must delve into this tapestry of innovation to leverage cutting-edge solutions. Moreover, when it comes to unlocking potential, a myriad of groundbreaking tools can facilitate a seamless journey. In conclusion, fostering a robust paradigm will empower teams to navigate the realm of technology and showcase pivotal results.",
+  "after": "Artificial intelligence matters a lot in the online world. Organizations should look into this mix of innovation to use modern solutions.\n\nTo tap potential, many new tools can help a smooth path. Building a solid model will help teams to deal with technology and show key results.",
+  "changes": [
+    "Cleared 24 AI-pattern phrase(s)",
+    "Softened absolute claims"
+  ],
+  "mode": "casual",
+  "strength": 2,
+  "health": {
+    "status": "ok",
+    "service": "grain",
+    "llm": false
+  }
+}

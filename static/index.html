@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Grain — rewrite AI-patterned text so it sounds like a person wrote it." />
+  <meta name="theme-color" content="#0c0f0e" />
+  <title>Grain — text that sounds human</title>
+  <style>
+    :root {
+      --bg: #0c0f0e;
+      --bg-elev: #141a17;
+      --bg-input: #0a0d0c;
+      --border: #24302a;
+      --border-focus: #5a8f6e;
+      --text: #e8efe9;
+      --muted: #8a9a90;
+      --accent: #7cb892;
+      --accent-dim: #3d6b52;
+      --accent-glow: rgba(124, 184, 146, 0.15);
+      --warn: #c4a35a;
+      --chip: #1c2822;
+      --danger: #c47a6a;
+      --radius: 12px;
+      --font: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+      --mono: "IBM Plex Mono", "SF Mono", ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 10% -10%, rgba(61, 107, 82, 0.18), transparent),
+        radial-gradient(ellipse 60% 40% at 90% 0%, rgba(196, 163, 90, 0.06), transparent);
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.25rem 1.25rem 3rem;
+    }
+
+    header.site {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.5rem 0 1.75rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      background: linear-gradient(145deg, var(--accent-dim), #1a2e24);
+      border: 1px solid var(--border-focus);
+      display: grid;
+      place-items: center;
+      font-weight: 600;
+      font-size: 0.85rem;
+      letter-spacing: 0.02em;
+      color: var(--accent);
+    }
+
+    .brand h1 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .brand span.tag {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1.25rem;
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+
+    .nav-links a { color: var(--muted); }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    .hero {
+      margin-bottom: 2rem;
+    }
+
+    .hero h2 {
+      font-size: clamp(1.6rem, 4vw, 2.25rem);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      max-width: 18ch;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero p.lead {
+      color: var(--muted);
+      max-width: 42ch;
+      font-size: 1.05rem;
+    }
+
+    .hero .note {
+      margin-top: 0.85rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      opacity: 0.85;
+    }
+
+    .workspace {
+      background: var(--bg-elev);
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) + 4px);
+      padding: 1.25rem;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 0.85rem 1.1rem;
+      margin-bottom: 1.15rem;
+      padding-bottom: 1.15rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .field label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    select, .strength-wrap {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      font: inherit;
+      font-size: 0.9rem;
+      min-width: 140px;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .strength-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 180px;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    #strengthVal {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--accent);
+      min-width: 1.2ch;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-left: auto;
+    }
+
+    button {
+      font: inherit;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-input);
+      color: var(--text);
+      padding: 0.55rem 1rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    }
+
+    button:hover { border-color: var(--muted); }
+    button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    button.primary {
+      background: var(--accent-dim);
+      border-color: var(--border-focus);
+      color: #e8f5ec;
+    }
+
+    button.primary:hover {
+      background: #4a8060;
+      border-color: var(--accent);
+    }
+
+    .panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 800px) {
+      .panels { grid-template-columns: 1fr; }
+      .actions { margin-left: 0; width: 100%; }
+      .actions button { flex: 1; }
+      .nav-links { display: none; }
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-height: 280px;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .panel-head h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .count {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    textarea {
+      flex: 1;
+      width: 100%;
+      min-height: 260px;
+      resize: vertical;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.95rem;
+      line-height: 1.55;
+      padding: 1rem;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    textarea::placeholder { color: #4a5a50; }
+
+    #output {
+      background: #0e1311;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      min-height: 1.75rem;
+      margin-top: 1rem;
+    }
+
+    .chip {
+      font-size: 0.72rem;
+      padding: 0.3rem 0.65rem;
+      border-radius: 999px;
+      background: var(--chip);
+      border: 1px solid var(--border);
+      color: var(--accent);
+      letter-spacing: 0.01em;
+    }
+
+    .chip.muted { color: var(--muted); }
+
+    .status {
+      margin-top: 0.75rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      min-height: 1.2em;
+    }
+
+    .status.error { color: var(--danger); }
+    .status.ok { color: var(--accent); }
+
+    footer.site {
+      margin-top: 2.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .kbd {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--bg-input);
+      color: var(--muted);
+    }
+
+    .hint-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.85rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="site">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">G</div>
+        <div>
+          <h1>Grain</h1>
+          <span class="tag">Natural rhythm, less AI texture</span>
+        </div>
+      </div>
+      <nav class="nav-links" aria-label="Section">
+        <a href="#workspace">Workspace</a>
+        <a href="#about">About</a>
+      </nav>
+    </header>
+
+    <section class="hero" id="about">
+      <h2>Make writing sound like a person wrote it.</h2>
+      <p class="lead">
+        Paste stiff, patterned prose. Grain softens the tells, mixes the rhythm,
+        and keeps your meaning intact — local by default, no account required.
+      </p>
+      <p class="note">
+        Grain is for natural voice, not for sneaking past detectors or academic shortcuts.
+      </p>
+    </section>
+
+    <section class="workspace" id="workspace">
+      <div class="controls">
+        <div class="field">
+          <label for="mode">Mode</label>
+          <select id="mode" name="mode">
+            <option value="casual" selected>Casual</option>
+            <option value="professional">Professional</option>
+            <option value="academic-light">Academic-light</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="strength">Strength</label>
+          <div class="strength-wrap">
+            <input type="range" id="strength" min="1" max="3" step="1" value="2" />
+            <span id="strengthVal">2</span>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="button" class="primary" id="btnHumanize">Humanize</button>
+          <button type="button" id="btnCopy" title="Copy output">Copy</button>
+          <button type="button" id="btnSwap" title="Move output to input">Swap</button>
+          <button type="button" id="btnClear">Clear</button>
+        </div>
+      </div>
+
+      <div class="panels">
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Input</h3>
+            <span class="count"><span id="inCount">0</span> chars</span>
+          </div>
+          <textarea
+            id="input"
+            placeholder="Paste AI-sounding text here…"
+            spellcheck="true"
+          ></textarea>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Output</h3>
+            <span class="count"><span id="outCount">0</span> chars</span>
+          </div>
+          <textarea id="output" readonly placeholder="Humanized text appears here…"></textarea>
+        </div>
+      </div>
+
+      <div class="chips" id="chips" aria-live="polite"></div>
+      <div class="hint-row">
+        <span><span class="kbd">Ctrl</span> / <span class="kbd">⌘</span> + <span class="kbd">Enter</span> to humanize</span>
+      </div>
+      <div class="status" id="status" role="status"></div>
+    </section>
+
+    <footer class="site">
+      <span>Grain — local rewrite engine · optional LLM if configured on the server</span>
+      <span>Works offline once this page is loaded from your host</span>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      const $ = (id) => document.getElementById(id);
+      const input = $("input");
+      const output = $("output");
+      const mode = $("mode");
+      const strength = $("strength");
+      const strengthVal = $("strengthVal");
+      const inCount = $("inCount");
+      const outCount = $("outCount");
+      const chips = $("chips");
+      const status = $("status");
+      const btnHumanize = $("btnHumanize");
+      const btnCopy = $("btnCopy");
+      const btnSwap = $("btnSwap");
+      const btnClear = $("btnClear");
+
+      const SAMPLE =
+        "In today's world, it is important to note that artificial intelligence plays a crucial role in the digital landscape. Furthermore, organizations must delve into this tapestry of innovation to leverage cutting-edge solutions. Moreover, when it comes to unlocking potential, a myriad of groundbreaking tools can facilitate a seamless journey. In conclusion, fostering a robust paradigm will empower teams to navigate the realm of technology and showcase pivotal results.";
+
+      function updateCounts() {
+        inCount.textContent = String(input.value.length);
+        outCount.textContent = String(output.value.length);
+      }
+
+      function setStatus(msg, kind) {
+        status.textContent = msg || "";
+        status.className = "status" + (kind ? " " + kind : "");
+      }
+
+      function renderChips(changes) {
+        chips.innerHTML = "";
+        if (!changes || !changes.length) return;
+        changes.forEach(function (c) {
+          const el = document.createElement("span");
+          el.className = "chip";
+          el.textContent = c;
+          chips.appendChild(el);
+        });
+      }
+
+      strength.addEventListener("input", function () {
+        strengthVal.textContent = strength.value;
+      });
+
+      input.addEventListener("input", updateCounts);
+      output.addEventListener("input", updateCounts);
+
+      async function humanize() {
+        const text = input.value;
+        if (!text.trim()) {
+          setStatus("Paste some text first.", "error");
+          return;
+        }
+        btnHumanize.disabled = true;
+        setStatus("Working…");
+        renderChips([]);
+        try {
+          const res = await fetch("/api/humanize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              text: text,
+              mode: mode.value,
+              strength: Number(strength.value),
+            }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(function () { return {}; });
+            throw new Error(err.detail || ("HTTP " + res.status));
+          }
+          const data = await res.json();
+          output.value = data.output || "";
+          renderChips(data.changes || []);
+          updateCounts();
+          setStatus("Done — edits applied.", "ok");
+        } catch (e) {
+          setStatus("Failed: " + (e.message || String(e)), "error");
+        } finally {
+          btnHumanize.disabled = false;
+        }
+      }
+
+      btnHumanize.addEventListener("click", humanize);
+
+      btnCopy.addEventListener("click", async function () {
+        if (!output.value) {
+          setStatus("Nothing to copy.", "error");
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(output.value);
+          setStatus("Copied to clipboard.", "ok");
+        } catch (_) {
+          output.select();
+          document.execCommand("copy");
+          setStatus("Copied.", "ok");
+        }
+      });
+
+      btnSwap.addEventListener("click", function () {
+        if (!output.value) {
+          setStatus("No output to swap.", "error");
+          return;
+        }
+        input.value = output.value;
+        output.value = "";
+        renderChips([]);
+        updateCounts();
+        setStatus("Swapped — ready for another pass.", "ok");
+      });
+
+      btnClear.addEventListener("click", function () {
+        input.value = "";
+        output.value = "";
+        renderChips([]);
+        updateCounts();
+        setStatus("");
+      });
+
+      document.addEventListener("keydown", function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+          e.preventDefault();
+          humanize();
+        }
+      });
+
+      // Soft empty-state hint: don't force sample, but keep available via double-click label
+      input.addEventListener("dblclick", function () {
+        if (!input.value.trim()) {
+          input.value = SAMPLE;
+          updateCounts();
+          setStatus("Loaded sample AI-slop text.", "ok");
+        }
+      });
+
+      updateCounts();
+    })();
+  </script>
+</body>
+</html>
