@@ -1,130 +1,101 @@
 # Grain
 
-**Grain** rewrites stiff, AI-patterned text so it reads more like a person wrote it — natural rhythm, contractions, fewer classic AIisms. It does **not** claim to make text “undetectable.”
+**Grain sands the AI texture out of your writing.** Paste something stiff, like a cover letter draft, a report paragraph, or a LinkedIn post that says "delve" three times. Grain trims the clichés, varies the sentence rhythm, and keeps your meaning.
 
-Local multi-pass engine by default. Optional OpenAI-compatible LLM mode if `OPENAI_API_KEY` is set.
+I built it because a lot of my own first drafts (and plenty of what I review) come out sounding the same: "in today's fast-paced digital landscape…". Grain is for people who want their writing to sound like *them*. It runs a free, local rule-based engine by default, and can optionally use any OpenAI-compatible LLM.
 
-## Quick start (local)
+It does **not** promise to make text "undetectable", and it isn't meant for passing off work that isn't yours.
+
+**Try it in your browser:** https://dave-4u.github.io/grain-humanizer/ (the same Python engine runs locally in your browser via Pyodide, so nothing is uploaded)
+
+![Grain, clean view](docs/img/screenshot.png)
+
+**"What changed" view.** Every removed cliché is struck through and every replacement is highlighted:
+
+![Grain, diff view](docs/img/screenshot-diff.png)
+
+## Quickstart
 
 ```bash
-cd text-humanizer
-python3 -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+./start.sh            # first run creates .venv and installs pinned deps; then http://localhost:8000
+./start.sh test       # 6 tests: engine + API
+```
+
+Manual:
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000
+uvicorn main:app --port 8000
 ```
 
-Or:
+### Optional LLM mode
+
+Copy `.env.example` and export the variables (or set them on your host). If `OPENAI_API_KEY` is set, Grain tries the LLM first and falls back to the local engine on any error.
 
 ```bash
-./start.sh
+export OPENAI_API_KEY=...            # any OpenAI-compatible endpoint
+export OPENAI_BASE_URL=https://api.openai.com/v1
+export OPENAI_MODEL=gpt-4o-mini
 ```
 
-Open **http://localhost:8000**
+## Features
 
-- UI: `GET /`
-- Health: `GET /health`
-- Humanize: `POST /api/humanize`
+- **Three voices** (Casual, Professional, Academic) and **three grit levels**
+- **AI-tell spotter.** As you type, it flags phrases like *delve, tapestry, leverage, seamless, in conclusion*.
+- **Before/after meter:** tells found → left, word count, average sentence length, and rhythm variety
+- **What changed** diff view (`Alt+D`), one-click copy (`Ctrl+Shift+C`), and `Ctrl+Enter` to run
+- **Works anywhere.** It uses the FastAPI server when one is running, and falls back to an in-browser Python engine (Pyodide) on static hosting like GitHub Pages.
+- Honest about limits: tips on reading it aloud, keeping facts, and adding one real detail
 
-### API example
+### API
 
 ```bash
-curl -s http://localhost:8000/api/humanize \
-  -H 'Content-Type: application/json' \
-  -d '{"text":"In today'\''s world, it is important to note that AI plays a crucial role.","mode":"casual","strength":2}'
-```
-
-Response:
-
-```json
-{ "output": "...", "changes": ["Cleared N AI-pattern phrase(s)", "..."] }
+curl -s localhost:8000/api/humanize -H 'Content-Type: application/json' \
+  -d '{"text":"It is important to note that AI plays a crucial role.","mode":"casual","strength":2}'
+# → {"output": "...", "changes": ["Cleared 2 AI-pattern phrase(s)", ...]}
 ```
 
 | Field | Values |
-|-------|--------|
+|---|---|
 | `mode` | `casual` (default), `professional`, `academic-light` |
-| `strength` | `1` light · `2` moderate · `3` aggressive |
+| `strength` | `1` light · `2` medium · `3` heavy |
 
-## Optional LLM mode
+`GET /health` returns `{"status":"ok","llm":false}`.
 
-If the server has an API key, Grain prefers the LLM, then falls back to the local engine on failure:
+## Deploy
 
-```bash
-export OPENAI_API_KEY=sk-...
-# optional:
-export OPENAI_BASE_URL=https://api.openai.com/v1
-export OPENAI_MODEL=gpt-4o-mini
-uvicorn main:app --host 0.0.0.0 --port 8000
-```
-
-Compatible with any OpenAI-style `/chat/completions` endpoint.
-
-## Deploy (Railway / Render / Fly / VPS)
-
-The app binds `0.0.0.0` and reads `$PORT` — ready for PaaS.
-
-### Generic / VPS
+The app binds `0.0.0.0` and reads `$PORT`, so it runs as-is on Railway, Render, Fly, or a VPS (`Procfile` and `Dockerfile` included).
 
 ```bash
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port $PORT
+docker build -t grain . && docker run -p 8000:8000 -e PORT=8000 grain
 ```
 
-Or use `./start.sh` / the included **Procfile**.
+To refresh the static Pages demo after changing the UI or engine: `sh scripts/build_pages.sh`.
 
-### Docker
+## Tech stack
 
-```bash
-docker build -t grain .
-docker run -p 8000:8000 -e PORT=8000 grain
-# with LLM:
-docker run -p 8000:8000 -e PORT=8000 -e OPENAI_API_KEY=sk-... grain
-```
-
-### Railway
-
-1. New project → deploy from this folder (or connect the repo).
-2. Build: `pip install -r requirements.txt`
-3. Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-4. Or rely on the **Procfile**.
-
-### Render
-
-1. Web Service from this directory.
-2. Build: `pip install -r requirements.txt`
-3. Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-
-### Fly.io
-
-```bash
-fly launch   # use the Dockerfile
-fly deploy
-```
-
-Set secrets as needed: `fly secrets set OPENAI_API_KEY=...`
-
-The frontend calls **relative** `/api/humanize` — no hardcoded localhost — so it works behind any public URL.
-
-## Project layout
+Python 3.10+, FastAPI, Uvicorn, and Pydantic, with a regex/heuristic multi-pass engine (`engine.py`). The UI is a single HTML file using vanilla JS (Instrument Sans + Newsreader). Pyodide powers the static demo.
 
 ```
-text-humanizer/
-  main.py           # FastAPI app
-  engine.py         # Local rewrite pipeline (+ optional LLM)
-  static/index.html # Single-page UI (inline CSS/JS)
-  requirements.txt
-  Procfile
-  Dockerfile
-  start.sh
-  README.md
+main.py            FastAPI app (/, /health, /api/humanize)
+engine.py          local rewrite pipeline + optional LLM
+static/index.html  the UI
+docs/              GitHub Pages demo (UI + engine.py for Pyodide)
+tests/             unittest: engine + API
 ```
+
+## Roadmap
+
+- Highlight AI tells inline in the input box
+- "Keep these words" list (names, product terms)
+- Browser extension for Gmail / LinkedIn text boxes
+- Side-by-side comparison of local engine vs LLM output
 
 ## Limitations
 
-- Local engine is rule/heuristic-based: strong on common AIisms and rhythm, not a full paraphrase model.
-- Meaning is preserved as best-effort; always skim the output.
-- Not a plagiarism or detector-evasion tool — use it to sound clearer and more natural.
+The local engine is rule-based. It's strong on common AI-isms and rhythm, but it isn't a full paraphrasing model. Always skim the output.
 
 ## License
 
-Use freely for your own hosting and projects.
+MIT © Adegboro David Oluwadamilare
